@@ -8,5 +8,5 @@ Official implementation code for [_Attention Swin U-Net: Cross-Contextual Attent
 ---
 
 ## Updates
-- October 23, 2022: Submitted to ISBI PRIME2022 [Under Review].
+- October 23, 2022: Submitted to ISBI2023 [Under Review].
 ---
