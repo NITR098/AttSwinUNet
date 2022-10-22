@@ -3,4 +3,10 @@ Official implementation code for [_Attention Swin U-Net: Cross-Contextual Attent
 
 ---
 
-![Proposed Model](./images/proposed_method_v2.pdf)
+![Proposed Model](./images/proposed_method_v2.png)
+
+---
+
+## Updates
+- October 23, 2022: Submitted to ISBI PRIME2022 [Under Review].
+---
