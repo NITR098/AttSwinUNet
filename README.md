@@ -15,9 +15,9 @@ Official implementation code for [_Attention Swin U-Net: Cross-Contextual Attent
 ---
 ## Citation
 ```
-@article{azad2022transdeeplab,
+@article{aghdam2022attention,
   title={Attention Swin U-Net: Cross-Contextual Attention Mechanism for Skin Lesion Segmentation},
-  author = {Aghdam, Ehsan Khodapanah and Azad, Reza and Zarvani, Maral and Merhof, Dorit},
+  author={Aghdam, Ehsan Khodapanah and Azad, Reza and Zarvani, Maral and Merhof, Dorit},
   journal={arXiv preprint arXiv:2210.16898},
   year={2022}
 }
