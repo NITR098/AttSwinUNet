@@ -1,0 +1,14 @@
+numpy
+tqdm
+tensorboard
+tensorboardX
+ml-collections
+medpy
+SimpleITK
+scipy
+h5py
+einops
+timm
+yacs
+PyYaml==5.1
+ml_collections
