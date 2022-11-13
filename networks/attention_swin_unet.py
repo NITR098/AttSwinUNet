@@ -47,11 +47,9 @@ class SwinAttentionUnet(nn.Module):
         self.mode            = config.mode
         self.skip_num        = config.skip_num
         self.operation       = config.operationaddatten
-        self.add_attention   = config.attention
-        self.is_crossvit     = config.iscrossvit
-        self.final_upsample = "expand_first"
-        self.norm_layer = nn.LayerNorm
-        
+        self.add_attention   = config.spatial_attention
+        self.final_upsample  = "expand_first"
+        self.norm_layer      = nn.LayerNorm
         
         #Build embedding
         self.patch_embed = PatchEmbed(
@@ -60,7 +58,6 @@ class SwinAttentionUnet(nn.Module):
         self.num_patches = self.patch_embed.num_patches
         patches_resolution = self.patch_embed.patches_resolution
         self.patches_resolution = patches_resolution
-
         #Build encoder
         self.encoder = Encoder(embed_dim= self.embed_dim,depths =self.depths,num_heads = self.num_heads,window_size = self.window_size,mlp_ratio = self.mlp_ratio,qkv_bias= self.qkv_bias ,\
         qk_scale  = self.qk_scale,drop_rate = self.drop_rate,attn_drop_rate = self.attn_drop_rate,norm_layer= self.norm_layer,use_checkpoint = self.use_checkpoint,\

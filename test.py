@@ -16,7 +16,6 @@ from trainer import trainer_synapse
 from configs import swin_attention_unet as config  
 from types import SimpleNamespace 
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--volume_path', type=str,
                     default='./data/', help='root dir for validation volume data')  # for acdc volume_path=root_dir
@@ -59,16 +58,14 @@ parser.add_argument('--tag', help='tag of experiment')
 parser.add_argument('--eval', action='store_true', help='Perform evaluation only')
 parser.add_argument('--throughput', action='store_true', help='Test throughput only')
 parser.add_argument('--mode', help='Select our contribution',
-                    choices=['swin','crossvittoken','swinxcit','swinxcitlpi','swinxcitlipdeform'], default='swin')
+                    choices=['swin','cross_contextual_attention','swinxcitlipdeform'], default='swin')
 parser.add_argument('--skip_num', help='Select our contribution',
                     choices=['0', '1', '2','3'], default='3')
 parser.add_argument('--operationaddatten', help='Select our contribution',
                     choices=['+', 'mul'], default='+')
-parser.add_argument('--attention', help='0 or 1',
-                    choices=['0',"1"], default="0")
-parser.add_argument('--iscrossvit', help='0 or 1',
+parser.add_argument('--spatial_attention', help='0 or 1',
                     choices=['0',"1"], default="1")
-                    
+
 
 args = parser.parse_args()
 if args.dataset == "Synapse":

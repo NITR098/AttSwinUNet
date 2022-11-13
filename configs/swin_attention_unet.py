@@ -6,7 +6,7 @@ def get_swin_unet_attention_configs():
     
     cfg = ml_collections.ConfigDict()
 
-    # Swin unet Transformer Configs
+    # Swin unet attention Transformer Configs
     
     cfg.image_size        = 224
     cfg.patch_size        = 4
@@ -28,8 +28,7 @@ def get_swin_unet_attention_configs():
     cfg.mode              = "swin"
     cfg.skip_num          = 3
     cfg.operationaddatten = '+'
-    cfg.attention         = '1'
-    cfg.is_crossvit       = '1'
+    cfg.spatial_attention = '1'
     cfg.final_upsample    = "expand_first"
     cfg.norm_layer        = nn.LayerNorm
     cfg.pretrain_ckpt = './pretrained_ckpt/swin_tiny_patch4_window7_224.pth'

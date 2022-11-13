@@ -26,11 +26,9 @@ class BasicLayer(nn.Module):
         use_checkpoint (bool): Whether to use checkpointing to save memory. Default: False.
         operation
     """
-
     def __init__(self, dim, input_resolution, depth, num_heads, window_size,
                  mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0.,
                  drop_path=0., norm_layer=nn.LayerNorm, downsample=None, use_checkpoint=False,operation='+'):
-
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -61,11 +59,9 @@ class BasicLayer(nn.Module):
             if self.use_checkpoint:
                 x = checkpoint.checkpoint(blk, x)
             else:
-                x,attention = blk(x,y)
-                
+                x,attention = blk(x,y)       
         if self.downsample is not None:
             x = self.downsample(x)
-       
         return x,attention
 
     def extra_repr(self) -> str:
@@ -167,16 +163,14 @@ class Encoder(nn.Module):
                                downsample=PatchMerging if (i_layer < self.num_layers - 1) else None,
                                use_checkpoint=use_checkpoint)
             self.layers.append(layer)
-        print("raft")
+       
          # absolute position embedding
         if self.ape:
             self.absolute_pos_embed = nn.Parameter(torch.zeros(1, num_patches, embed_dim))
             trunc_normal_(self.absolute_pos_embed, std=.02)
             
         self.pos_drop = nn.Dropout(p=drop_rate) 
-
-       
-
+        
     def forward(self,x):
       x = self.patch_embed(x)
       if self.ape:
@@ -188,9 +182,7 @@ class Encoder(nn.Module):
         x_downsample.append(x)
         x,attention= layer(x,["encoder"])
         x_attention_encoder.append(attention)
-          
       x = self.norm(x)  # B L C
-  
       return x, x_downsample,x_attention_encoder
  
 

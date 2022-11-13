@@ -6,9 +6,6 @@ from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 from .embedding import PatchEmbed
 from  .swin_block import SwinTransformerBlock 
 from  .skipconnection.crossvit import CrossTransformer
-from  .skipconnection.xcit import XCA
-from  .skipconnection.xcablock import XCABlock
-from  .skipconnection.xcablockdeform import XCABlockDeform
 import math
 import copy
 
@@ -130,65 +127,28 @@ class Decoder(nn.Module):
       use_checkpoint,num_layers,patch_size=4, in_chans=3,\
       drop_path_rate=0.1,patch_embed = None,patch_norm=True,final_upsample="expand_first",num_classes=9,args = None):
         super().__init__()
-        self.patch_norm = patch_norm
-        self.num_layers = num_layers
-        self.mlp_ratio = mlp_ratio
+        self.patch_norm     = patch_norm
+        self.num_layers     = num_layers
+        self.mlp_ratio      = mlp_ratio
         self.final_upsample = final_upsample
-        self.num_classes = num_classes
-        self.mode = args.mode
-        self.skip_num = args.skip_num
-        self.operation = args.operationaddatten
-        self.add_attention = args.attention
-        self.isxvit = args.iscrossvit
-        self.num_features = int(embed_dim * 2 ** (self.num_layers - 1))
-        self.embed_dim = embed_dim
-        num_patches = patch_embed.num_patches
-        pretrained_dict = torch.load('./pretrained_ckpt/xcit_tiny_12_p16_224.pth', map_location='cuda')['model']
-        full_dict = copy.deepcopy(pretrained_dict)
-
-        #build cross cit 
-     
-        if self.mode in["swinxcit"]:
-          self.Crosscit_layer = nn.ModuleList()
-          for i in range(self.num_layers-1):
-            
-            
-            XCA_layer=XCA(dim = embed_dim*2**i, num_heads=8, qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=0,proj_drop=drop_rate,drop_path =0.1,eta=1e-5)
-            model_dict = XCA_layer.state_dict()
-            for k in list(full_dict.keys()):
-                if k in model_dict:
-                    if full_dict[k].shape != model_dict[k].shape:
-                        print(" del shape pretrain:{};shape model:{}".format(k,model_dict[k].shape))
-                        del full_dict[k]
- 
-
-            XCA_layer.load_state_dict(full_dict, strict=False)
-            self.Crosscit_layer.append(XCA_layer)
-        #build cca block
-        if self.mode in["swinxcitlpi"]:
-          self.swinxcitlpi_layer = nn.ModuleList()
-          for i in range(self.num_layers-1):
-            XCABlock_layer = XCABlock(dim = embed_dim*2**i, num_heads=8,mlp_ratio=4., qkv_bias=qkv_bias, qk_scale=qk_scale,drop=0.,attn_drop=0.,drop_path=0.,act_layer=nn.GELU, norm_layer=nn.LayerNorm,num_tokens=num_patches//4**i, eta=1e-5 )
-            XCABlock_layer.load_state_dict(pretrained_dict, strict=False)
-            self.swinxcitlpi_layer.append(XCABlock_layer)
-        #deform  cca block
-        if self.mode in["swinxcitlipdeform"]:
-            
-          self.swinxcitlipdeform_layer = nn.ModuleList()
-          for i in range(self.num_layers-1):
-            XCABlock_layer = XCABlockDeform(dim = embed_dim*2**i, num_heads=8,mlp_ratio=4., qkv_bias=qkv_bias, qk_scale=qk_scale,drop=0.,attn_drop=0.,drop_path=0.,act_layer=nn.GELU, norm_layer=nn.LayerNorm,num_tokens=num_patches//4**i, eta=1e-5 )
-            XCABlock_layer.load_state_dict(pretrained_dict, strict=False)
-            self.swinxcitlipdeform_layer.append(XCABlock_layer)
-      
-        
-        # build crossvit layer
-        if self.mode in["crossvittoken"] or (self.mode in ['swinxcit','swinxcitlpi','swinxcitlipdeform'] and self.isxvit=='1'):
+        self.num_classes    = num_classes
+        self.mode           = args.mode
+        self.skip_num       = args.skip_num
+        self.operation      = args.operationaddatten
+        self.add_attention  = args.spatial_attention
+        self.num_features   = int(embed_dim * 2 ** (self.num_layers - 1))
+        self.embed_dim      = embed_dim
+        num_patches         = patch_embed.num_patches
+        pretrained_dict     = torch.load('./pretrained_ckpt/xcit_tiny_12_p16_224.pth', map_location='cuda')['model']
+        full_dict           = copy.deepcopy(pretrained_dict)     
+       
+        # build  cross contextual attention module
+        if self.mode in["cross_contextual_attention"] and self.isxvit=='1':
           self.Crossvit_layer = nn.ModuleList()
           for i in range(self.num_layers-1):
             self.Crossvit_layer.append(CrossTransformer(sm_dim =embed_dim*2**i, lg_dim = embed_dim*2**i, depth = 2, heads = 8, dim_head =64 , dropout = drop_rate))
       
         patches_resolution = patch_embed.patches_resolution
-     
         self.patches_resolution = patches_resolution
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]  # stochastic depth decay rule
         self.layers_up = nn.ModuleList()
@@ -215,16 +175,12 @@ class Decoder(nn.Module):
                                 use_checkpoint=use_checkpoint,operation =self.operation)
             self.layers_up.append(layer_up)
             self.concat_back_dim.append(concat_linear)
-
-       
         self.norm = norm_layer(self.num_features)
         self.norm_up= norm_layer(self.embed_dim)
-        
         if self.final_upsample == "expand_first":
             self.up = FinalPatchExpand_X4(input_resolution=(img_size//patch_size,img_size//patch_size),dim_scale=4,dim=embed_dim)
             self.output = nn.Conv2d(in_channels=embed_dim,out_channels=self.num_classes,kernel_size=1,bias=False)
-       
-      
+             
     def up_x4(self, x):
       H, W = self.patches_resolution
       B, L, C = x.shape
@@ -235,18 +191,16 @@ class Decoder(nn.Module):
           x = x.permute(0,3,1,2) #B,C,H,W
           x = self.output(x)
       return x   
-           
+              
     def forward(self, x, x_downsample,x_attention_encoder):
       for inx, layer_up in enumerate(self.layers_up):
           if inx == 0:
-              if self.mode in ["swin","crossvittoken","swinxcit","swinxcitlpi","swinxcitlipdeform"]:
+              if self.mode in ["swin","cross_contextual_attention","swinxcitlipdeform"]:
                   if self.add_attention=="1":
                       x = layer_up(x,x_attention_encoder[3-inx])
                   else:
-                      
-                      x = layer_up(x,None)   
+                    x = layer_up(x,None)   
           else:
-    
               if self.mode=="swin":
                   x = torch.cat([x,x_downsample[3-inx]],-1)
                   x = self.concat_back_dim[inx](x)
@@ -272,7 +226,7 @@ class Decoder(nn.Module):
             
                   else:
                       x = layer_up(x,None)
-              if self.mode =="crossvittoken":
+              if self.mode =="cross_contextual_attention":
                   if self.skip_num == '1' and inx==1:
                       y = self.Crossvit_layer[3-inx]
                       a,b= y(x,x_downsample[3-inx])
@@ -291,150 +245,11 @@ class Decoder(nn.Module):
                   else:
                       x = torch.cat([x,x_downsample[3-inx]],-1)
                       x = self.concat_back_dim[inx](x)
-                      #attention
+                      #spatial attention module 
                   if self.add_attention=="1":
                     x = layer_up(x,x_attention_encoder[3-inx])
                   else:
                     x = layer_up(x,None)
-              
-              if self.mode =="swinxcit":
-                if self.skip_num == '1' and inx==1:
-                  if self.isxvit=='1':
-                    crcit = self.Crosscit_layer[3-inx](x_downsample[3-inx])
-                    a,b = self.Crossvit_layer[3-inx](x,crcit)
-                    x = torch.cat([a,b],-1)
-                    x = self.concat_back_dim[inx](x)
-                  else:
-                    crcit = self.Crosscit_layer[3-inx](x_downsample[3-inx])
-                    x = torch.cat([x,crcit],-1)
-                    x = self.concat_back_dim[inx](x)
-                elif self.skip_num =='2' and inx in [1,2]:
-                    if self.isxvit=='1':
-                      crcit = self.Crosscit_layer[3-inx](x_downsample[3-inx])
-                      a,b = self.Crossvit_layer[3-inx](x,crcit)
-                      x = torch.cat([a,b],-1)
-                      x = self.concat_back_dim[inx](x)
-                    else:
-                      crcit = self.Crosscit_layer[3-inx](x_downsample[3-inx])
-                      x = torch.cat([x,crcit],-1)
-                      x = self.concat_back_dim[inx](x)
-
-                elif self.skip_num =='3':
-                  if self.isxvit=='1':
-                    crcit = self.Crosscit_layer[3-inx](x_downsample[3-inx])
-                    a,b = self.Crossvit_layer[3-inx](x,crcit)
-                    x = torch.cat([a,b],-1)
-                    x = self.concat_back_dim[inx](x)
-                  else:
-                    crcit = self.Crosscit_layer[3-inx](x_downsample[3-inx])
-                    x = torch.cat([x,crcit],-1)
-                    x = self.concat_back_dim[inx](x)
-                    
-                else: # just concat x skip  x encoder
-                    x = torch.cat([x,x_downsample[3-inx]],-1)
-                    x = self.concat_back_dim[inx](x)
-                if self.add_attention=="1":
-                    x = layer_up(x,x_attention_encoder[3-inx])
-                else:
-                    x = layer_up(x,None)
-
-              if self.mode =="swinxcitlpi":
-                if self.skip_num == '1' and inx==1:
-                  _,token,_ = x.shape
-                  token_num_sqrt = int(math.sqrt(token))
-                  if self.isxvit=='1':
-                    crcitlpi = self.swinxcitlpi_layer[3-inx](x_downsample[3-inx],token_num_sqrt,token_num_sqrt)
-                    a,b = self.Crossvit_layer[3-inx](x,crcitlpi)
-                    x = torch.cat([a,b],-1)
-                    x = self.concat_back_dim[inx](x)
-                    
-                  else:
-                    crcitlpi = self.swinxcitlpi_layer[3-inx](x_downsample[3-inx],token_num_sqrt,token_num_sqrt)
-                    x = torch.cat([x,crcitlpi],-1)
-                    x = self.concat_back_dim[inx](x)
-                elif self.skip_num =='2' and inx in [1,2]:
-                  _,token,_ = x.shape
-                  token_num_sqrt = int(math.sqrt(token))
-                  if self.isxvit=='1':
-                    crcitlpi = self.swinxcitlpi_layer[3-inx](x_downsample[3-inx],token_num_sqrt,token_num_sqrt)
-                    a,b = self.Crossvit_layer[3-inx](x,crcitlpi)
-                    x = torch.cat([a,b],-1)
-                    x = self.concat_back_dim[inx](x)
-                  else:
-                    crcitlpi = self.swinxcitlpi_layer[3-inx](x_downsample[3-inx],token_num_sqrt,token_num_sqrt)
-                    x = torch.cat([x,crcitlpi],-1)
-                    x = self.concat_back_dim[inx](x)
-                        
-                elif self.skip_num =='3':
-                  _,token,_ = x.shape
-                  token_num_sqrt = int(math.sqrt(token))
-                  if self.isxvit=='1':
-                    crcitlpi = self.swinxcitlpi_layer[3-inx](x_downsample[3-inx],token_num_sqrt,token_num_sqrt)
-                    a,b = self.Crossvit_layer[3-inx](x,crcitlpi)
-                    x = torch.cat([a,b],-1)
-                    x = self.concat_back_dim[inx](x)
-                  else:
-                    crcitlpi = self.swinxcitlpi_layer[3-inx](x_downsample[3-inx],token_num_sqrt,token_num_sqrt)
-                    x = torch.cat([x,crcitlpi],-1)
-                    x = self.concat_back_dim[inx](x)
-                else: 
-                  x = torch.cat([x,x_downsample[3-inx]],-1)
-                  x = self.concat_back_dim[inx](x)
-                if self.add_attention=="1":
-                      x = layer_up(x,x_attention_encoder[3-inx])
-                else:
-                  x = layer_up(x,None)
-              if self.mode =="swinxcitlipdeform":
-                if self.skip_num == '1' and inx==1:
-                  _,token,_ = x.shape
-                  token_num_sqrt = int(math.sqrt(token))
-                  if self.isxvit=='1':
-                    crcitlpi = self.swinxcitlipdeform_layer[3-inx](x_downsample[3-inx],token_num_sqrt,token_num_sqrt)
-                    a,b = self.Crossvit_layer[3-inx](x,crcitlpi)
-                    x = torch.cat([a,b],-1)
-                    x = self.concat_back_dim[inx](x)
-                    
-                  else:
-                    crcitlpi = self.swinxcitlipdeform_layer[3-inx](x_downsample[3-inx],token_num_sqrt,token_num_sqrt)
-                    x = torch.cat([x,crcitlpi],-1)
-                    x = self.concat_back_dim[inx](x)
-                elif self.skip_num =='2' and inx in [1,2]:
-                  _,token,_ = x.shape
-                  token_num_sqrt = int(math.sqrt(token))
-                  if self.isxvit=='1':
-                    crcitlpi = self.swinxcitlipdeform_layer[3-inx](x_downsample[3-inx],token_num_sqrt,token_num_sqrt)
-                    a,b = self.Crossvit_layer[3-inx](x,crcitlpi)
-                    x = torch.cat([a,b],-1)
-                    x = self.concat_back_dim[inx](x)
-                  else:
-                    crcitlpi = self.swinxcitlipdeform_layer[3-inx](x_downsample[3-inx],token_num_sqrt,token_num_sqrt)
-                    x = torch.cat([x,crcitlpi],-1)
-                    x = self.concat_back_dim[inx](x)
-                        
-                elif self.skip_num =='3':
-                  _,token,_ = x.shape
-                  token_num_sqrt = int(math.sqrt(token))
-                  if self.isxvit=='1':
-                    crcitlpi = self.swinxcitlipdeform_layer[3-inx](x_downsample[3-inx],token_num_sqrt,token_num_sqrt)
-                    a,b = self.Crossvit_layer[3-inx](x,crcitlpi)
-                    x = torch.cat([a,b],-1)
-                    x = self.concat_back_dim[inx](x)
-                  else:
-                    crcitlpi = self.swinxcitlipdeform_layer[3-inx](x_downsample[3-inx],token_num_sqrt,token_num_sqrt)
-                    x = torch.cat([x,crcitlpi],-1)
-                    x = self.concat_back_dim[inx](x)
-                else: 
-                  x = torch.cat([x,x_downsample[3-inx]],-1)
-                  x = self.concat_back_dim[inx](x)
-                if self.add_attention=="1":
-                      x = layer_up(x,x_attention_encoder[3-inx])
-                else:
-                  x = layer_up(x,None)
-                
-               
-                  
-              
-      
       x = self.norm_up(x)  # B L C
       x = self.up_x4(x)
       return x
