@@ -23,7 +23,6 @@ class SwinAttentionUnet(nn.Module):
 
     def __init__(self,config,num_classes):
         super().__init__()
-        print("---------",config,"-----------")
         self.img_size        = config.image_size
         self.patch_size      = config.patch_size
         self.in_chans        = config.patch_size
