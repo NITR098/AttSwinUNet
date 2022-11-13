@@ -35,6 +35,7 @@ python test.py --dataset Synapse --cfg configs/swin_tiny_patch4_window7_224_lite
 ---
 ## References
 - [Swin-Unet](https://github.com/HuCaoFighting/Swin-Unet)
+- [CrossViT](https://github.com/IBM/CrossViT)
 ---
 ## Citation
 ```
