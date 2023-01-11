@@ -12,8 +12,6 @@ Official implementation code for [_Attention Swin U-Net: Cross-Contextual Attent
 For training deep model and evaluating on each data set follow the bellow steps:</br>
 1- Download the ISIC 2018 train dataset from [this](https://challenge.isic-archive.com/data) link and extract both training dataset and ground truth folders inside the `dataset_isic18`. </br>
 2- Run `Prepare_ISIC2018.py` for data preperation and dividing data to train,validation and test sets. </br>
-3- Run `Train_Skin_Lesion_Segmentation.py` for training the model using trainng and validation sets. The model will be train for 100 epochs and it will save the best weights for the valiation set. </br>
-4- For performance calculation and producing segmentation result, run `Evaluate_Skin.py`. It will represent performance measures and will saves related results in `output` folder.</br>
 
 **Notice:**
 For training and evaluating on ISIC 2017 and ph2 follow the bellow steps: :</br>
