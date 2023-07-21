@@ -1,15 +1,7 @@
 from __future__ import division
 import os
 import argparse
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-import torch
-import torch.optim as optim
-from torch.utils.data import DataLoader
-from loader import *
-from networks.attention_swin_unet import SwinAttentionUnet as ViT_seg
-from configs import swin_attention_unet as config
-from scipy.ndimage.morphology import binary_fill_holes, binary_opening
-from sklearn.metrics import f1_score
+
 import pandas as pd
 import glob
 import nibabel as nib
@@ -18,8 +10,20 @@ import numpy as np
 import copy
 import yaml
 from types import SimpleNamespace  
-from utils import load_pretrain
 import trainer
+
+import torch
+import torch.optim as optim
+from torch.utils.data import DataLoader
+
+from loader import *
+from networks.attention_swin_unet import SwinAttentionUnet as ViT_seg
+from configs import swin_attention_unet as config
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+from scipy.ndimage.morphology import binary_fill_holes, binary_opening
+from sklearn.metrics import f1_score
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--root_path', type=str,
@@ -99,7 +103,6 @@ test_dataset  = isic_loader(path_Data = data_path, train = False, Test = True)
 test_loader   = DataLoader(test_dataset, batch_size = 1, shuffle= True)
 #build model
 Net   = ViT_seg(configs,num_classes=args.num_classes).cuda()
-Net   = load_pretrain(configs,Net)
 Net   = Net.to(device)
 if int(config['pretrained']):
     Net.load_state_dict(torch.load(config['saved_model'], map_location='cpu')['model_weights'])
